@@ -40,15 +40,22 @@ def load_data(dataset_id):
 
 X, y = load_data(DATASET_MAP[pilihan_dataset])
 
+
+# Pengguna dapat mengatur ukuran data uji   
+test_size = st.slider("Test Size", min_value=0.1, max_value=0.5, value=0.2, step=0.05)
+# Pengguna dapat mengatur random state
+random_state = st.number_input("Random State", min_value=0, max_value=1000, value=10, step=1)
 # 3. Eksekusi Klasifikasi
 if st.button("Jalankan Model"):
     # Pra-pemrosesan sederhana (Membersihkan angka & NaN)
+    
+    
     X_clean = X.select_dtypes(include=['number']).fillna(X.mean(numeric_only=True))
     y_clean = y.values.ravel() if isinstance(y, pd.DataFrame) else y
 
     # Pembagian Data
     X_train, X_test, y_train, y_test = train_test_split(
-        X_clean, y_clean, test_size=0.2, random_state=42
+        X_clean, y_clean, test_size=test_size, random_state=random_state
     )
 
     # Mengambil objek model berdasarkan pilihan pengguna
