@@ -13,6 +13,8 @@ from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
+from utils import terapkan_tema
+terapkan_tema("regresi")
 UCI_REGRESSION_DATASETS = {
     "Real Estate Valuation": 477,
     "Concrete Compressive Strength": 165,

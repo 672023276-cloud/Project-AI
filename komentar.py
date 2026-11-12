@@ -1,12 +1,17 @@
 
 import streamlit as st
 from datetime import datetime, timezone, timedelta
+from utils import terapkan_tema
 from db import get_db, cek_koneksi
+
+
 
 WIB = timezone(timedelta(hours=7))
 KOLEKSI = "komentar"
 MAKS_NAMA = 50
 MAKS_KOMENTAR = 500
+
+terapkan_tema("komentar")
 
 st.title("Komentar Publik")
 st.caption("Tinggalkan komentar tentang aplikasi ini. Semua komentar tersimpan di MongoDB Atlas.")

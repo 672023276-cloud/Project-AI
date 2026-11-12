@@ -1,6 +1,8 @@
 import streamlit as st
 from db import cek_koneksi, hitung
+from utils import terapkan_tema
 
+terapkan_tema("home")
 
 #NAMA = "Nama Kamu"
 #NIM = "672023276"
@@ -33,19 +35,35 @@ c3.metric("Riwayat eksperimen", hitung("eksperimen") if ok else "-")
 st.divider()
 
 # --- Kartu fitur ---
+import streamlit as st
+
 st.subheader("Fitur")
+
 FITUR = [
-    ("Regresi", "Prediksi nilai numerik dengan 5 model, metrik MSE, RMSE, dan R²."),
-    ("Klasifikasi", "Prediksi kategori dengan 5 model, confusion matrix, dan F1."),
-    ("Clustering", "K-Means dengan Elbow Method, Silhouette Score, dan PCA 2D."),
-    ("Komentar & AI", "Komentar publik tersimpan di MongoDB, diringkas dan dinilai sentimennya oleh Groq."),
+    ("Regresi", "Prediksi nilai numerik dengan 6 model, metrik MAE, RMSE, dan R².", "regresi.py", ":material/show_chart:"),
+    ("Klasifikasi", "Prediksi kategori dengan 6 model; accuracy, precision, recall, F1, dan confusion matrix", "klasifikasi.py", ":material/target:"),
+    ("Clustering", "3 algoritma (K-Means, Hierarchical, DBSCAN)", "clustering.py", ":material/hub:"),
+    ("Komentar", "Komentar publik tersimpan di MongoDB.", "komentar.py", ":material/chat:"),
+    ("AI Groq", "Tanyakan sesuatu pada AI Groq.", "ai.py", ":material/smart_toy:"),
+    ("CNN", "Mengenali angka tulisan tangan (MNIST).", "cnn.py", ":material/image:"),
 ]
 
-kolom = st.columns(2)
-for i, (judul, desk) in enumerate(FITUR):
-    with kolom[i % 2].container(border=True):
-        st.markdown(f"**{judul}**")
-        st.write(desk)
+# Menampilkan fitur dalam layout 2 kolom (2x2 grid)
+col1, col2 = st.columns(2)
+
+for i, (judul, deskripsi, page_path, ikon) in enumerate(FITUR):
+    target_col = col1 if i % 2 == 0 else col2
+    
+    with target_col:
+        with st.container(border=True):
+            st.markdown(f"**{judul}**")
+            st.caption(deskripsi)
+            st.page_link(
+                page_path, 
+                label=f"Coba {judul.strip()} →", 
+                icon=ikon,
+                use_container_width=True
+            )
 st.divider()
 
 # --- Cara pakai ---
@@ -54,9 +72,6 @@ st.markdown(
     "1. Pilih halaman dari menu di sebelah kiri.\n"
     "2. Pilih dataset dan model, lalu atur parameter.\n"
     "3. Klik tombol latih dan lihat hasil evaluasinya.\n"
-    "4. Tambahkan dataset atau komentar, datanya tersimpan di MongoDB."
+    
 )
 
-# --- Teknologi ---
-st.subheader("Teknologi")
-st.write("Streamlit · scikit-learn · TensorFlow · MongoDB Atlas · Groq · Pandas · Matplotlib")

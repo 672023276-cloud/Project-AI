@@ -11,6 +11,9 @@ from sklearn.cluster import KMeans, AgglomerativeClustering, DBSCAN
 from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score, davies_bouldin_score
 from scipy.cluster.hierarchy import linkage, dendrogram
+from utils import terapkan_tema
+
+terapkan_tema("clustering")
 
 UCI_CLUSTERING_DATASETS = {
     "Iris": 53,

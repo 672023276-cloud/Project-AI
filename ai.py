@@ -1,20 +1,18 @@
 import streamlit as st
 from groq import Groq
 from typing import Generator
+from utils import terapkan_tema
 
-st.set_page_config(page_icon=":material/auto_awesome:", page_title="Groq LLM", layout="wide")
+
+terapkan_tema("ai")
+
+st.set_page_config(page_icon=":material/smart_toy:", page_title="Groq LLM", layout="wide")
 
 
-def icon(emoji: str):
-    """Shows an emoji as a Notion-style page icon."""
-    st.write(
-        f'<span style="font-size: 78px; line-height: 1">{emoji}</span>',
-        unsafe_allow_html=True,
-    )
 
-icon("🏎️")
 
 st.subheader("Groq Chat Streamlit App", divider="rainbow", anchor=False)
+st.write("Max Tokens membatasi panjang maksimum respons AI. Nilai lebih tinggi memungkinkan AI memberikan jawaban atau kode program yang lebih panjang.")
 
 client = Groq(
     api_key=st.secrets["GROQ_API_KEY"]
@@ -33,25 +31,25 @@ if "selected_model" not in st.session_state:
 models = {
     "openai/gpt-oss-120b": {
         "name": "GPT OSS 120B",
-        "tokens": 131072,
+        "tokens": 65536,
         "developer": "OpenAI"
     },
 
     "openai/gpt-oss-20b": {
         "name": "GPT OSS 20B",
-        "tokens": 131072,
+        "tokens": 65536,
         "developer": "OpenAI"
     },
 
     "llama-3.1-8b-instant": {
         "name": "Llama 3.1 8B",
-        "tokens": 131072,
+        "tokens": 8192,
         "developer": "Meta"
     },
 
     "llama-3.3-70b-versatile": {
         "name": "Llama 3.3 70B",
-        "tokens": 131072,
+        "tokens": 32768,
         "developer": "Meta"
     }
 }
@@ -63,8 +61,8 @@ with col1:
         options=list(models.keys()),
         format_func=lambda x: models[x]["name"],
         index=0  # Default to the first model in the list
+    
     )
-
 # Detect model change and clear chat history if model has changed
 if st.session_state.selected_model != model_option:
     st.session_state.messages = []

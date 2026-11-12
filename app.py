@@ -10,7 +10,8 @@ pg = st.navigation([
     st.Page("klasifikasi.py", title="Klasifikasi", icon=":material/target:"),
     st.Page("clustering.py", title="Clustering", icon=":material/hub:"),
     st.Page("komentar.py", title="Komentar", icon=":material/chat:"),
-    st.Page("ai.py", title="groq", icon=":material/auto_awesome:")
+    st.Page("ai.py", title="groq", icon=":material/smart_toy:"),
+    st.Page("CNN.py", title="Deep Learning CNN", icon=":material/auto_awesome:"),
 ])
 pg.run()
 

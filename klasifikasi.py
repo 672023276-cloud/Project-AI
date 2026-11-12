@@ -15,10 +15,14 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.naive_bayes import GaussianNB
+from utils import terapkan_tema
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score,
     confusion_matrix, classification_report,
 )
+
+
+terapkan_tema("klasifikasi")
 
 UCI_CLASSIFICATION_DATASETS = {
     "Breast Cancer Wisconsin": 17,
