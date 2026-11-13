@@ -12,6 +12,8 @@ pg = st.navigation([
     st.Page("komentar.py", title="Komentar", icon=":material/chat:"),
     st.Page("ai.py", title="groq", icon=":material/smart_toy:"),
     st.Page("CNN.py", title="Deep Learning CNN", icon=":material/auto_awesome:"),
+    st.Page("realtime.py", title="Real-Time Dataset", icon=":material/sensors:"),
+    st.Page("sentiment.py", title="Analisis Sentimen", icon=":material/psychology:"),
 ])
 pg.run()
 
