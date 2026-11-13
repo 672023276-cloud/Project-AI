@@ -22,7 +22,6 @@ terapkan_tema("clustering")
 UCI_CLUSTERING_DATASETS = {
     "Iris": 53,
     "Wine": 109,
-    "Seeds": 236,
     "Wholesale Customers": 292,
 }
 
@@ -162,7 +161,7 @@ with tab_hasil:
     metode_link = q4.selectbox("Linkage (Hierarchical)", ["ward", "complete", "average", "single"])
     eps = q5.slider("eps (DBSCAN)", 0.1, 5.0, 1.5, step=0.1)
     min_samples = q6.slider("min_samples (DBSCAN)", 2, 20, 5)
-    jalankan_klik = st.button("Jalankan clustering", type="primary")
+    jalankan_klik = st.button("Latih Model", type="primary")
 
     if jalankan_klik:
         st.session_state["clu_hasil"] = {

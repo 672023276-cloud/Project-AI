@@ -25,7 +25,7 @@ UCI_REGRESSION_DATASETS = {
     "Real Estate Valuation": 477,
     "Concrete Compressive Strength": 165,
     "Energy Efficiency": 242,
-    "Seoul Bike Sharing Demand": 560,
+    
 }
 
 MODEL_NAMES = [
