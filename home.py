@@ -12,9 +12,9 @@ st.title("Aplikasi Machine Learning + MongoDB")
 
 
 st.write(
-    "Aplikasi ini mendemonstrasikan regresi, klasifikasi, clustering, dan deep "
-    "learning, dengan data yang tersimpan di MongoDB Atlas serta analisis "
-    "komentar publik menggunakan LLM Groq."
+    "Aplikasi ini mendemonstrasikan regresi, klasifikasi, clustering, dan Deep Learning CNN untuk analisis dan prediksi data." 
+    "Dilengkapi MongoDB Atlas untuk penyimpanan data serta AI Groq untuk interaksi"
+
 )
 
 st.divider()
@@ -45,7 +45,7 @@ FITUR = [
     ("Clustering", "3 algoritma (K-Means, Hierarchical, DBSCAN)", "clustering.py", ":material/hub:"),
     ("Komentar", "Komentar publik tersimpan di MongoDB.", "komentar.py", ":material/chat:"),
     ("AI Groq", "Tanyakan sesuatu pada AI Groq.", "ai.py", ":material/smart_toy:"),
-    ("CNN", "Mengenali angka tulisan tangan (MNIST).", "cnn.py", ":material/image:"),
+    ("CNN", "Mengenali angka tulisan tangan (MNIST).", "CNN.py", ":material/image:"),
 ]
 
 # Menampilkan fitur dalam layout 2 kolom (2x2 grid)
