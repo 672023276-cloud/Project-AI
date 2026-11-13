@@ -105,7 +105,7 @@ with tab_latih:
     unit_dense = c5.select_slider("Unit lapisan Dense", options=[64, 128, 256], value=128)
     st.caption("Mulai dengan 10.000 data dan 5 epoch agar cepat. Data 60.000 butuh waktu lebih lama di server.")
 
-    if st.button("Mulai pelatihan", type="primary"):
+    if st.button("Mulai", type="primary"):
         model = bangun_model(16, 32, unit_dense, dropout)
         model.compile(loss="sparse_categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
         bar = st.progress(0.0)

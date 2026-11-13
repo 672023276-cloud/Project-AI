@@ -1,4 +1,8 @@
 import streamlit as st
+from data_tambahan import (
+    muat_dataset, muat_tambahan, daftar_unggahan, render_form, render_unggah_dataset,
+    catat_eksperimen, tampilkan_perbandingan,
+)
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -11,8 +15,8 @@ from sklearn.cluster import KMeans, AgglomerativeClustering, DBSCAN
 from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score, davies_bouldin_score
 from scipy.cluster.hierarchy import linkage, dendrogram
-from utils import terapkan_tema
 
+from utils import terapkan_tema
 terapkan_tema("clustering")
 
 UCI_CLUSTERING_DATASETS = {
@@ -79,6 +83,20 @@ def simpan_eksperimen(dokumen):
     get_db()["eksperimen"].insert_one(dokumen)
 
 
+
+def retrain_clustering(algoritma, X_raw, baru, k, metode_link, eps, min_samples, random_state):
+    """Kelompokkan data UCI saja (sebelum) dan UCI + tambahan (sesudah)."""
+    _, Xs_d = siapkan_fitur(X_raw[~baru])
+    lab_d = jalankan(algoritma, Xs_d, k, metode_link, eps, min_samples, random_state)
+    _, Xs_g = siapkan_fitur(X_raw)
+    lab_g = jalankan(algoritma, Xs_g, k, metode_link, eps, min_samples, random_state)
+    return {
+        "sebelum": ringkas(algoritma, Xs_d, lab_d), "sesudah": ringkas(algoritma, Xs_g, lab_g),
+        "Xs": Xs_g, "labels": lab_g, "baru": np.asarray(baru), "n_dasar": int((~baru).sum()),
+        "n_tambahan": int(baru.sum()),
+    }
+
+
 # ===== UI =====
 st.title("Clustering")
 st.caption("Mengelompokkan data tanpa label menggunakan K-Means, Hierarchical, dan DBSCAN.")
@@ -90,29 +108,40 @@ def load_uci_data(dataset_id):
     return repo.data.features
 
 
-with st.sidebar:
-    st.header("Pengaturan")
-    pilihan_dataset = st.selectbox("Dataset UCI", list(UCI_CLUSTERING_DATASETS.keys()))
-    algoritma = st.selectbox("Algoritma", ALGORITMA)
-    k = st.slider("Jumlah cluster (K)", 2, 10, 3)
-    metode_link = st.selectbox("Linkage (Hierarchical)", ["ward", "complete", "average", "single"])
-    eps = st.slider("eps (DBSCAN)", 0.1, 5.0, 1.5, step=0.1)
-    min_samples = st.slider("min_samples (DBSCAN)", 2, 20, 5)
-    random_state = int(st.number_input("Random state", 0, 1000, 42, step=1))
-    st.divider()
-   
-
-try:
-    X_raw = load_uci_data(UCI_CLUSTERING_DATASETS[pilihan_dataset])
-except Exception as e:
-    st.error(f"Gagal mengunduh dataset: {e}")
-    st.stop()
-
-X_num, Xs = siapkan_fitur(X_raw)
-
-tab_data, tab_hasil, tab_k, tab_banding = st.tabs(
-    ["Data", "Hasil Clustering", "Penentuan K", "Bandingkan Algoritma"]
+tab_data, tab_hasil, tab_k, tab_banding, tab_tambah, tab_unggah = st.tabs(
+    ["Data", "Hasil Clustering", "Penentuan K", "Bandingkan Algoritma", "Data Tambahan & Retraining", "Unggah Dataset"]
 )
+
+with tab_data:
+    _next = st.session_state.pop("pilih_next_clustering", None)
+    if _next:
+        st.session_state["pilih_ds_clustering"] = _next
+    opsi_dataset = list(UCI_CLUSTERING_DATASETS.keys()) + daftar_unggahan("clustering", st.session_state.get("data_ver", 0))
+    if st.session_state.get("pilih_ds_clustering") not in opsi_dataset:
+        st.session_state.pop("pilih_ds_clustering", None)
+    pilihan_dataset = st.selectbox("Dataset", opsi_dataset, key="pilih_ds_clustering")
+
+def _uci():
+    return load_uci_data(UCI_CLUSTERING_DATASETS[pilihan_dataset]), []
+
+
+ambil_uci = _uci if pilihan_dataset in UCI_CLUSTERING_DATASETS else None
+try:
+    semua, meta, peringatan = muat_dataset(
+        pilihan_dataset, "clustering", st.session_state.get("data_ver", 0), ambil_uci
+    )
+except Exception as e:
+    st.error(f"Gagal memuat dataset: {e}")
+    st.stop()
+if peringatan:
+    with tab_data:
+        st.warning(peringatan)
+
+fitur_kolom = list(meta["kolom"])
+X_raw = semua[fitur_kolom]
+X_num, Xs = siapkan_fitur(X_raw)
+sig = f"{pilihan_dataset}#{len(X_raw)}"
+
 
 with tab_data:
     c1, c2, c3 = st.columns(3)
@@ -125,18 +154,26 @@ with tab_data:
     st.caption("Data distandarisasi sebelum clustering agar fitur berskala besar tidak mendominasi jarak.")
 
 with tab_hasil:
-    jalankan_klik = st.button("Latih model", type="primary")
+    q1, q2, q3 = st.columns(3)
+    algoritma = q1.selectbox("Algoritma", ALGORITMA)
+    k = q2.slider("Jumlah cluster (K)", 2, 10, 3)
+    random_state = int(q3.number_input("Random state", 0, 1000, 42, step=1))
+    q4, q5, q6 = st.columns(3)
+    metode_link = q4.selectbox("Linkage (Hierarchical)", ["ward", "complete", "average", "single"])
+    eps = q5.slider("eps (DBSCAN)", 0.1, 5.0, 1.5, step=0.1)
+    min_samples = q6.slider("min_samples (DBSCAN)", 2, 20, 5)
+    jalankan_klik = st.button("Jalankan clustering", type="primary")
 
     if jalankan_klik:
         st.session_state["clu_hasil"] = {
-            "dataset": pilihan_dataset,
+            "dataset": sig,
             "algoritma": algoritma,
             "labels": jalankan(algoritma, Xs, k, metode_link, eps, min_samples, random_state),
         }
 
     tersimpan = st.session_state.get("clu_hasil")
-    if not tersimpan or tersimpan["dataset"] != pilihan_dataset:
-        st.info("Atur parameter di sidebar, lalu klik **Latih model**.")
+    if not tersimpan or tersimpan["dataset"] != sig:
+        st.info("Atur parameter di atas, lalu klik **Jalankan clustering**.")
     else:
         labels = tersimpan["labels"]
         algoritma = tersimpan["algoritma"]
@@ -235,13 +272,13 @@ with tab_k:
             "Cocokkan dengan titik siku pada grafik Elbow sebelum memutuskan.")
 
 with tab_banding:
-    st.write("Jalankan ketiga algoritma dengan parameter di sidebar, lalu bandingkan.")
+    st.write("Jalankan ketiga algoritma dengan parameter di tab Hasil Clustering, lalu bandingkan.")
     if st.button("Bandingkan algoritma"):
         baris = [ringkas(n, Xs, jalankan(n, Xs, k, metode_link, eps, min_samples, random_state))
                  for n in ALGORITMA]
-        st.session_state["clu_banding"] = {"dataset": pilihan_dataset, "tabel": pd.DataFrame(baris)}
+        st.session_state["clu_banding"] = {"dataset": sig, "tabel": pd.DataFrame(baris)}
     b = st.session_state.get("clu_banding")
-    if b and b["dataset"] == pilihan_dataset:
+    if b and b["dataset"] == sig:
         tabel = b["tabel"]
         st.dataframe(tabel.round(4), use_container_width=True)
         valid = tabel.dropna(subset=["Silhouette"])
@@ -251,3 +288,68 @@ with tab_banding:
             terbaik = valid.sort_values("Silhouette", ascending=False).iloc[0]
             st.info(f"Silhouette tertinggi: {terbaik['Algoritma']} ({terbaik['Silhouette']:.3f}). "
                     "DBSCAN tidak memerlukan K dan dapat menandai outlier sebagai noise.")
+
+
+with tab_tambah:
+    st.write("Data di sini khusus untuk retraining. Data ini **tidak digabung** ke dataset utama, "
+             "jadi tab Data dan Latih Model tidak berubah.")
+    tam = muat_tambahan(pilihan_dataset, "clustering", st.session_state.get("tam_ver", 0),
+                        tuple(meta["kolom"]), tuple(meta["numerik"]))
+    n_tambah = len(tam)
+    render_form(pilihan_dataset, "clustering", semua, tam, meta, fitur_kolom, "clu")
+
+    st.divider()
+    st.subheader("Clustering ulang")
+    st.write(f"Dataset utama: {len(X_raw)} baris | Data tambahan: {n_tambah} baris")
+    st.caption(f"Memakai algoritma dan parameter dari tab Hasil Clustering: {algoritma}.")
+    sig_rt = f"{sig}+{n_tambah}"
+
+    if st.button("Kelompokkan ulang dan bandingkan", type="primary", key="clu_rt_btn"):
+        if n_tambah == 0:
+            st.warning("Belum ada data tambahan. Isi form di atas dulu.")
+        else:
+            X_cat = pd.concat([X_raw, tam[fitur_kolom]], ignore_index=True)
+            baru = np.array([False] * len(X_raw) + [True] * n_tambah)
+            with st.spinner("Mengelompokkan sebelum dan sesudah penambahan data..."):
+                hasil = retrain_clustering(
+                    algoritma, X_cat, baru, k, metode_link, eps, min_samples, random_state
+                )
+            hasil.update(sig=sig_rt, algoritma=algoritma)
+            st.session_state["clu_rt"] = hasil
+            try:
+                catat_eksperimen({
+                    "jenis": "retraining_clustering", "dataset": pilihan_dataset, "algoritma": algoritma,
+                    "n_dasar": hasil["n_dasar"], "n_tambahan": hasil["n_tambahan"],
+                    "sebelum": {m: (None if v is None else round(v, 4)) for m, v in hasil["sebelum"].items() if m != "Algoritma"},
+                    "sesudah": {m: (None if v is None else round(v, 4)) for m, v in hasil["sesudah"].items() if m != "Algoritma"},
+                })
+            except Exception as e:
+                st.warning(f"Hasil tidak tersimpan ke MongoDB: {e}")
+
+    r = st.session_state.get("clu_rt")
+    if r and r["sig"] == sig_rt:
+        st.success(f"{r['algoritma']}: {r['n_dasar']} baris menjadi {r['n_dasar'] + r['n_tambahan']} baris.")
+        tampilkan_perbandingan(
+            r["sebelum"], r["sesudah"],
+            ["Jumlah cluster", "Silhouette", "Davies-Bouldin", "Titik noise"],
+            lebih_kecil=("Davies-Bouldin",), netral=("Jumlah cluster", "Titik noise"),
+        )
+        P = PCA(n_components=2).fit_transform(r["Xs"])
+        lab = np.asarray(r["labels"])
+        baru_p = r["baru"]
+        fig5, ax5 = plt.subplots(figsize=(8, 5))
+        for i, lb in enumerate(sorted(set(lab))):
+            warna = "#888888" if lb == -1 else PALET[i % len(PALET)]
+            m = lab == lb
+            nama_lb = "Noise" if lb == -1 else f"Cluster {lb}"
+            ax5.scatter(P[m & ~baru_p, 0], P[m & ~baru_p, 1], s=35, c=warna, alpha=0.8, label=nama_lb)
+            ax5.scatter(P[m & baru_p, 0], P[m & baru_p, 1], s=90, c=warna, marker="^",
+                        edgecolors="black", linewidth=1)
+        ax5.set_title("Hasil sesudah penambahan data (segitiga = data tambahan)")
+        ax5.legend()
+        ax5.grid(alpha=0.2)
+        st.pyplot(fig5)
+        plt.close(fig5)
+
+with tab_unggah:
+    render_unggah_dataset("clustering", "cluu", None, opsi_dataset, pilihan_dataset, list(UCI_CLUSTERING_DATASETS.keys())[0])

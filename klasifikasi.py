@@ -1,4 +1,8 @@
 import streamlit as st
+from data_tambahan import (
+    muat_dataset, muat_tambahan, daftar_unggahan, render_form, render_unggah_dataset,
+    catat_eksperimen, tampilkan_perbandingan,
+)
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -15,13 +19,12 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.naive_bayes import GaussianNB
-from utils import terapkan_tema
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score,
     confusion_matrix, classification_report,
 )
 
-
+from utils import terapkan_tema
 terapkan_tema("klasifikasi")
 
 UCI_CLASSIFICATION_DATASETS = {
@@ -106,6 +109,25 @@ def simpan_eksperimen(dokumen):
     get_db()["eksperimen"].insert_one(dokumen)
 
 
+
+def retrain_klasifikasi(nama, X_raw, y, baru, test_size, random_state):
+    """Latih dari data UCI (sebelum) dan UCI + tambahan (sesudah); data uji diambil dari data UCI dan sama untuk keduanya."""
+    X_all = preprocess_fitur(X_raw).reset_index(drop=True)
+    y_all = np.asarray(y)
+    idx_dasar = np.where(~baru)[0]
+    idx_baru = np.where(baru)[0]
+    y_dasar = y_all[idx_dasar]
+    strat = y_dasar if np.bincount(y_dasar).min() >= 2 else None
+    tr, te = train_test_split(idx_dasar, test_size=test_size, random_state=random_state, stratify=strat)
+    tr2 = np.concatenate([tr, idx_baru])
+    _, _, sebelum = evaluasi(nama, X_all.iloc[tr], X_all.iloc[te], y_all[tr], y_all[te], random_state)
+    _, _, sesudah = evaluasi(nama, X_all.iloc[tr2], X_all.iloc[te], y_all[tr2], y_all[te], random_state)
+    return {
+        "sebelum": sebelum, "sesudah": sesudah, "n_latih_sebelum": len(tr),
+        "n_latih_sesudah": len(tr2), "n_uji": len(te), "n_tambahan": len(idx_baru),
+    }
+
+
 # ===== UI =====
 st.title("Klasifikasi")
 st.caption("Prediksi kategori menggunakan dataset UCI Machine Learning Repository.")
@@ -117,23 +139,51 @@ def load_uci_data(dataset_id):
     return repo.data.features, repo.data.targets
 
 
-with st.sidebar:
-    st.header("Pengaturan")
-    pilihan_dataset = st.selectbox("Dataset UCI", list(UCI_CLASSIFICATION_DATASETS.keys()))
-    test_size = st.slider("Test size", 0.1, 0.5, 0.2, step=0.05)
-    random_state = int(st.number_input("Random state", 0, 1000, 42, step=1))
+tab_data, tab_latih, tab_banding, tab_tambah, tab_unggah = st.tabs(
+    ["Data", "Latih Model", "Bandingkan Semua", "Data Tambahan & Retraining", "Unggah Dataset"]
+)
 
+with tab_data:
+    _next = st.session_state.pop("pilih_next_klasifikasi", None)
+    if _next:
+        st.session_state["pilih_ds_klasifikasi"] = _next
+    opsi_dataset = list(UCI_CLASSIFICATION_DATASETS.keys()) + daftar_unggahan("klasifikasi", st.session_state.get("data_ver", 0))
+    if st.session_state.get("pilih_ds_klasifikasi") not in opsi_dataset:
+        st.session_state.pop("pilih_ds_klasifikasi", None)
+    pilihan_dataset = st.selectbox("Dataset", opsi_dataset, key="pilih_ds_klasifikasi")
+
+def _uci():
+    X_uci, y_uci = load_uci_data(UCI_CLASSIFICATION_DATASETS[pilihan_dataset])
+    return pd.concat([X_uci, y_uci.iloc[:, [0]]], axis=1), [str(y_uci.columns[0])]
+
+
+ambil_uci = _uci if pilihan_dataset in UCI_CLASSIFICATION_DATASETS else None
 try:
-    X_raw, y_raw = load_uci_data(UCI_CLASSIFICATION_DATASETS[pilihan_dataset])
+    semua, meta, peringatan = muat_dataset(
+        pilihan_dataset, "klasifikasi", st.session_state.get("data_ver", 0), ambil_uci
+    )
 except Exception as e:
-    st.error(f"Gagal mengunduh dataset: {e}")
+    st.error(f"Gagal memuat dataset: {e}")
     st.stop()
+if peringatan:
+    with tab_data:
+        st.warning(peringatan)
 
-X = preprocess_fitur(X_raw)
+target_nama = meta["target"][0]
+fitur_kolom = [c for c in meta["kolom"] if c != target_nama]
+semua = semua[semua[target_nama].notna()].reset_index(drop=True)
+X_raw = semua[fitur_kolom]
+y_raw = semua[[target_nama]]
 y, kelas = siapkan_target(y_raw, pilihan_dataset)
+X = preprocess_fitur(X_raw)
+sig = f"{pilihan_dataset}#{len(X)}"
+with tab_latih:
+    p1, p2 = st.columns(2)
+    test_size = p1.slider("Test size", 0.1, 0.5, 0.2, step=0.05)
+    random_state = int(p2.number_input("Random state", 0, 1000, 42, step=1))
+
 X_train, X_test, y_train, y_test = bagi_data(X, y, test_size, random_state)
 
-tab_data, tab_latih, tab_banding = st.tabs(["Data", "Latih Model", "Bandingkan Semua"])
 
 with tab_data:
     c1, c2, c3, c4 = st.columns(4)
@@ -157,12 +207,12 @@ with tab_latih:
                 pilihan_model, X_train, X_test, y_train, y_test, random_state
             )
         st.session_state["kls_latih"] = {
-            "dataset": pilihan_dataset, "pipe": pipe, "pred": pred, "hasil": hasil,
+            "dataset": sig, "pipe": pipe, "pred": pred, "hasil": hasil,
             "y_test": np.asarray(y_test), "kolom": list(X.columns), "kelas": kelas,
         }
 
     r = st.session_state.get("kls_latih")
-    if r and r["dataset"] == pilihan_dataset:
+    if r and r["dataset"] == sig:
         h = r["hasil"]
         st.success(f"Hasil {h['Model']} pada {pilihan_dataset}")
         m1, m2, m3, m4 = st.columns(4)
@@ -217,12 +267,12 @@ with tab_banding:
             baris.append(h)
             bar.progress((i + 1) / len(MODEL_NAMES))
         st.session_state["kls_banding"] = {
-            "dataset": pilihan_dataset,
+            "dataset": sig,
             "tabel": pd.DataFrame(baris).sort_values("F1", ascending=False).reset_index(drop=True),
         }
 
     b = st.session_state.get("kls_banding")
-    if b and b["dataset"] == pilihan_dataset:
+    if b and b["dataset"] == sig:
         tabel = b["tabel"]
         st.dataframe(tabel.round(4), use_container_width=True)
         st.bar_chart(tabel.set_index("Model")["F1"])
@@ -232,3 +282,58 @@ with tab_banding:
             f"dan accuracy {terbaik['Accuracy']:.3f}. F1 dipakai sebagai acuan utama "
             f"karena memperhitungkan precision dan recall sekaligus."
         )
+
+
+with tab_tambah:
+    st.write("Data di sini khusus untuk retraining. Data ini **tidak digabung** ke dataset utama, "
+             "jadi tab Data dan Latih Model tidak berubah.")
+    tam = muat_tambahan(pilihan_dataset, "klasifikasi", st.session_state.get("tam_ver", 0),
+                        tuple(meta["kolom"]), tuple(meta["numerik"]))
+    tam = tam[tam[target_nama].notna()].reset_index(drop=True)
+    n_tambah = len(tam)
+    render_form(pilihan_dataset, "klasifikasi", semua, tam, meta, fitur_kolom, "kls", target=(target_nama, "kelas"))
+
+    st.divider()
+    st.subheader("Retraining")
+    st.write(f"Dataset utama: {len(X_raw)} baris | Data tambahan: {n_tambah} baris")
+
+    model_rt = st.selectbox("Model untuk retraining", MODEL_NAMES, key="kls_rt_model")
+    sig_rt = f"{sig}+{n_tambah}"
+    if st.button("Latih ulang dan bandingkan", type="primary", key="kls_rt_btn"):
+        if n_tambah == 0:
+            st.warning("Belum ada data tambahan. Isi form di atas dulu.")
+        else:
+            X_cat = pd.concat([X_raw, tam[fitur_kolom]], ignore_index=True)
+            y_cat, _ = siapkan_target(pd.concat([y_raw, tam[[target_nama]]], ignore_index=True), pilihan_dataset)
+            baru = np.array([False] * len(X_raw) + [True] * n_tambah)
+            with st.spinner("Melatih sebelum dan sesudah penambahan data..."):
+                hasil = retrain_klasifikasi(model_rt, X_cat, y_cat, baru, test_size, random_state)
+            hasil.update(sig=sig_rt, model=model_rt)
+            st.session_state["kls_rt"] = hasil
+            try:
+                catat_eksperimen({
+                    "jenis": "retraining_klasifikasi", "dataset": pilihan_dataset, "model": model_rt,
+                    "n_dasar": len(X_raw), "n_tambahan": n_tambah,
+                    "sebelum": {k: round(v, 4) for k, v in hasil["sebelum"].items() if k != "Model"},
+                    "sesudah": {k: round(v, 4) for k, v in hasil["sesudah"].items() if k != "Model"},
+                })
+            except Exception as e:
+                st.warning(f"Hasil tidak tersimpan ke MongoDB: {e}")
+
+    r = st.session_state.get("kls_rt")
+    if r and r["sig"] == sig_rt:
+        st.success(
+            f"{r['model']}: data latih {r['n_latih_sebelum']} baris menjadi {r['n_latih_sesudah']} baris "
+            f"(data uji tetap {r['n_uji']} baris)."
+        )
+        tampilkan_perbandingan(r["sebelum"], r["sesudah"], ["Accuracy", "Precision", "Recall", "F1"])
+        tabel = pd.DataFrame({
+            "Sebelum": {m: r["sebelum"][m] for m in ("Accuracy", "Precision", "Recall", "F1")},
+            "Sesudah": {m: r["sesudah"][m] for m in ("Accuracy", "Precision", "Recall", "F1")},
+        })
+        st.dataframe(tabel.round(4), use_container_width=True)
+        st.caption("Data uji sama untuk kedua model agar perbandingannya adil. Panah hijau berarti membaik.")
+
+
+with tab_unggah:
+    render_unggah_dataset("klasifikasi", "klsu", "kelas", opsi_dataset, pilihan_dataset, list(UCI_CLASSIFICATION_DATASETS.keys())[0])

@@ -2,15 +2,14 @@ import streamlit as st
 
 
 TEMA = {
-    "home":          ("#0f1530", "#2a1650", "#8B7CF6"),
-    "regresi":       ("#0b1830", "#0f3d4a", "#4DA3FF"),
-    "klasifikasi":   ("#1a0f30", "#3d1650", "#C084FC"),
-    "clustering":    ("#0b1f1a", "#0f3d36", "#2ED3A0"),
-    "CNN": ("#101040", "#1a2d70", "#6EA8FF"),
-    "komentar":      ("#301408", "#5a1f10", "#FF8A5B"),
-    "ai":          ("#2a1020", "#4a1838", "#F472B6"),
+    "home":        ("#0b1830", "#161B26", "#4DA3FF"),
+    "regresi":     ("#0b1830", "#161B26", "#2ED3A0"),
+    "klasifikasi": ("#0b1830", "#161B26", "#FF8A5B"),
+    "clustering":  ("#0b1830", "#161B26", "#B18CFF"),
+    "CNN":         ("#0b1830", "#161B26", "#A3E635"),
+    "komentar":    ("#0b1830", "#161B26", "#FFD166"),
+    "ai":          ("#0b1830", "#161B26", "#F472B6"),
 }
- 
 
 def terapkan_tema(nama):
     """Panggil di baris awal tiap halaman: terapkan_tema("regresi")."""
