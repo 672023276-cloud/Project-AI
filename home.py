@@ -46,6 +46,8 @@ FITUR = [
     ("Komentar", "Komentar publik tersimpan di MongoDB.", "komentar.py", ":material/chat:"),
     ("AI Groq", "Tanyakan sesuatu pada AI Groq.", "ai.py", ":material/smart_toy:"),
     ("CNN", "Mengenali angka tulisan tangan (MNIST).", "CNN.py", ":material/image:"),
+    ("Sentimen", "Analisis sentimen otomatis menggunakan LLM Groq.", "sentiment.py", ":material/record_voice_over:"),
+    ("Realtime", "Mengambil data cuaca secara real-time dari Open-Meteo dan menyimpannya di MongoDB.", "realtime.py", ":material/record_voice_over:"),
 ]
 
 # Menampilkan fitur dalam layout 2 kolom (2x2 grid)
