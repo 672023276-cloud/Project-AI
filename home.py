@@ -10,9 +10,10 @@ st.title("Aplikasi Machine Learning + MongoDB")
 
 
 st.write(
-    "Aplikasi ini mendemonstrasikan regresi, klasifikasi, clustering, dan Deep Learning CNN untuk analisis dan prediksi data." 
-    "Dilengkapi MongoDB Atlas untuk penyimpanan data serta AI Groq untuk interaksi"
-
+    "Aplikasi ini mendemonstrasikan regresi, klasifikasi, clustering, dan Deep Learning CNN "
+    "untuk analisis dan prediksi data, serta pengambilan data real-time dari Open-Meteo. "
+    "Dilengkapi MongoDB Atlas untuk penyimpanan data, AI Groq untuk interaksi, "
+    "dan analisis sentimen otomatis terhadap komentar pengguna."
 )
 
 st.divider()
